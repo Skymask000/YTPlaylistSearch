@@ -250,6 +250,9 @@ test("withConcurrency: a rejecting task propagates without cancelling others", a
     () => { ran.push("b"); return Promise.reject(new Error("boom")); },
     () => { ran.push("c"); return Promise.resolve("c"); },
   ];
-  await assert.rejects(() => withConcurrency(2, tasks), /boom/);
+  // limit=1 is load-bearing: with a single worker, a fail-fast catch would kill
+  // the only consumer and task "c" would never run. limit=2 cannot detect that,
+  // because the healthy worker picks up "c" before the rejection propagates.
+  await assert.rejects(() => withConcurrency(1, tasks), /boom/);
   assert.deepEqual(ran, ["a", "b", "c"], "all tasks should have run despite rejection");
 });
