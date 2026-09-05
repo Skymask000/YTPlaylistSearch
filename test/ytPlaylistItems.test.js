@@ -144,7 +144,9 @@ import { fetchPlaylistItems, withConcurrency } from "../src/ytPlaylistItems.js";
 
 function stubFetch(responses) {
   let calls = 0;
-  const impl = async () => {
+  const urls = [];
+  const impl = async (url) => {
+    urls.push(url);
     const r = responses[calls++];
     if (!r) throw new Error(`stubFetch: no response for call #${calls}`);
     return {
@@ -154,6 +156,7 @@ function stubFetch(responses) {
     };
   };
   impl.calls = () => calls;
+  impl.urls = () => urls;
   return impl;
 }
 
@@ -185,6 +188,22 @@ test("fetchPlaylistItems: paginates via nextPageToken and aggregates", async () 
     { pagesDone: 1, itemsSoFar: 1 },
     { pagesDone: 2, itemsSoFar: 2 },
   ]);
+
+  // Verify request URLs contain correct params and pageToken forwarding
+  const urls = fetchImpl.urls();
+  assert.equal(urls.length, 2);
+
+  const url1 = new URL(urls[0]);
+  assert.equal(url1.searchParams.get("part"), "snippet");
+  assert.equal(url1.searchParams.get("maxResults"), "50");
+  assert.equal(url1.searchParams.get("playlistId"), "PLx");
+  assert.equal(url1.searchParams.get("pageToken"), null, "first request should have no pageToken");
+
+  const url2 = new URL(urls[1]);
+  assert.equal(url2.searchParams.get("part"), "snippet");
+  assert.equal(url2.searchParams.get("maxResults"), "50");
+  assert.equal(url2.searchParams.get("playlistId"), "PLx");
+  assert.equal(url2.searchParams.get("pageToken"), "T2", "second request should forward pageToken=T2");
 });
 
 test("fetchPlaylistItems: 404 throws 'playlist_not_found'", async () => {
@@ -225,10 +244,12 @@ test("withConcurrency: caps in-flight at limit", async () => {
 });
 
 test("withConcurrency: a rejecting task propagates without cancelling others", async () => {
+  const ran = [];
   const tasks = [
-    () => Promise.resolve("a"),
-    () => Promise.reject(new Error("boom")),
-    () => Promise.resolve("c"),
+    () => { ran.push("a"); return Promise.resolve("a"); },
+    () => { ran.push("b"); return Promise.reject(new Error("boom")); },
+    () => { ran.push("c"); return Promise.resolve("c"); },
   ];
   await assert.rejects(() => withConcurrency(2, tasks), /boom/);
+  assert.deepEqual(ran, ["a", "b", "c"], "all tasks should have run despite rejection");
 });
