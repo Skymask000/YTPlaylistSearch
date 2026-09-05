@@ -1,3 +1,6 @@
+import { getAuthToken, clearAuthToken, NotSignedInError } from "./src/auth.js";
+import { getMyChannel } from "./src/ytApi.js";
+
 const DEFAULT_UI_STATE = {
   schemaVersion: 1,
   source: "mine",
@@ -46,6 +49,36 @@ async function writeUiState(patch) {
   return merged;
 }
 
+async function handleSignIn(switchAccount) {
+  try {
+    const token = await getAuthToken({ interactive: true, switchAccount });
+    const identity = await getMyChannel(token);
+    await chrome.storage.local.set({ authIdentity: identity });
+    return { ok: true, identity };
+  } catch (err) {
+    if (err instanceof NotSignedInError) return { error: err.message };
+    throw err;
+  }
+}
+
+async function handleSignOut() {
+  await clearAuthToken();
+  await chrome.storage.local.remove(["authIdentity", "playlistIndex", "playlistCache"]);
+  return { ok: true };
+}
+
+async function handleRefreshIdentity() {
+  try {
+    const token = await getAuthToken({ interactive: false });
+    const identity = await getMyChannel(token);
+    await chrome.storage.local.set({ authIdentity: identity });
+    return { ok: true, identity };
+  } catch (err) {
+    if (err instanceof NotSignedInError) return { ok: false, identity: null };
+    throw err;
+  }
+}
+
 async function handleMessage(msg) {
   switch (msg?.action) {
     case "getState":
@@ -54,7 +87,11 @@ async function handleMessage(msg) {
       await writeUiState(msg.patch ?? {});
       return { ok: true };
     case "signIn":
+      return await handleSignIn(msg.switchAccount === true);
     case "signOut":
+      return await handleSignOut();
+    case "refreshIdentity":
+      return await handleRefreshIdentity();
     case "refreshPlaylistIndex":
     case "loadPlaylist":
     case "loadAllPlaylists":
