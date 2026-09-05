@@ -1,5 +1,6 @@
 import { getAuthToken, clearAuthToken, NotSignedInError } from "./src/auth.js";
-import { getMyChannel } from "./src/ytApi.js";
+import { getMyChannel, listMyPlaylists } from "./src/ytApi.js";
+import { fetchPlaylistItems } from "./src/ytPlaylistItems.js";
 
 const DEFAULT_UI_STATE = {
   schemaVersion: 1,
@@ -79,6 +80,45 @@ async function handleRefreshIdentity() {
   }
 }
 
+async function handleRefreshPlaylistIndex() {
+  try {
+    const token = await getAuthToken({ interactive: false });
+    const items = await listMyPlaylists(token);
+    const playlistIndex = { schemaVersion: 1, fetchedAt: Date.now(), items };
+    await chrome.storage.local.set({ playlistIndex });
+    return { ok: true, playlistIndex };
+  } catch (err) {
+    if (err instanceof NotSignedInError) return { error: "not_signed_in" };
+    throw err;
+  }
+}
+
+async function handleLoadPlaylist(playlistId, force) {
+  if (!playlistId) return { error: "missing_playlistId" };
+  const state = await chrome.storage.local.get(["playlistCache", "playlistIndex"]);
+  const cache = state.playlistCache ?? {};
+  if (!force && cache[playlistId]) return { ok: true, fromCache: true };
+  try {
+    const token = await getAuthToken({ interactive: false });
+    const items = await fetchPlaylistItems(token, playlistId);
+    const idx = state.playlistIndex?.items ?? [];
+    const meta = idx.find((p) => p.id === playlistId);
+    const entry = {
+      fetchedAt: Date.now(),
+      playlistId,
+      playlistTitle: meta?.title ?? "",
+      source: "mine",
+      items,
+    };
+    const nextCache = { ...cache, [playlistId]: entry };
+    await chrome.storage.local.set({ playlistCache: nextCache });
+    return { ok: true, fromCache: false, count: items.length };
+  } catch (err) {
+    if (err instanceof NotSignedInError) return { error: "not_signed_in" };
+    throw err;
+  }
+}
+
 async function handleMessage(msg) {
   switch (msg?.action) {
     case "getState":
@@ -93,7 +133,9 @@ async function handleMessage(msg) {
     case "refreshIdentity":
       return await handleRefreshIdentity();
     case "refreshPlaylistIndex":
+      return await handleRefreshPlaylistIndex();
     case "loadPlaylist":
+      return await handleLoadPlaylist(msg.playlistId, msg.force === true);
     case "loadAllPlaylists":
     case "loadLinkPlaylist":
       return { error: "not_implemented" };
