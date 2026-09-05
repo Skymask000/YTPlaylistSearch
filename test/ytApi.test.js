@@ -62,3 +62,25 @@ test("getMyChannel: returns normalized channel, or null when empty", async () =>
   const empty = stubFetch([{ body: { items: [] } }]);
   assert.equal(await getMyChannel("tok", { fetchImpl: empty }), null);
 });
+
+test("listMyPlaylists: non-401 error rejects with the API message, not NotSignedInError", async () => {
+  const fetchImpl = stubFetch([
+    { ok: false, status: 403, body: { error: { message: "The request cannot be completed because you have exceeded your quota." } } },
+  ]);
+  await assert.rejects(
+    () => listMyPlaylists("tok", { fetchImpl }),
+    (err) => !(err instanceof NotSignedInError) && err.message.includes("exceeded your quota"),
+  );
+});
+
+test("listMyPlaylists: page 2 failure rejects, does not resolve with partial page-1 results", async () => {
+  const fetchImpl = stubFetch([
+    { body: {
+        nextPageToken: "T2",
+        items: [{ id: "PL1", snippet: { title: "One", thumbnails: { default: { url: "u1" } } }, contentDetails: { itemCount: 10 } }],
+    } },
+    { ok: false, status: 500, body: { error: { message: "Backend Error" } } },
+  ]);
+  await assert.rejects(() => listMyPlaylists("tok", { fetchImpl }));
+  assert.equal(fetchImpl.calls(), 2);
+});
