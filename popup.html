@@ -22,8 +22,11 @@
   </fieldset>
 
   <div id="mine-area">
-    <select id="playlist-select"></select>
-    <div id="freshness"><span id="last-refreshed"></span> <button id="refresh-link" type="button">refresh</button></div>
+    <div id="playlist-row">
+      <select id="playlist-select"></select>
+      <button id="refresh-btn" type="button" title="Re-fetch from YouTube, ignoring the cache">Refresh Playlists</button>
+    </div>
+    <div id="freshness"><span id="last-refreshed"></span></div>
   </div>
 
   <div id="link-area" hidden>

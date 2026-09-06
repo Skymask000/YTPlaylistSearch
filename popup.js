@@ -252,11 +252,13 @@ function renderFreshness(uiState, playlistCache) {
   if (!id) { el.textContent = ""; return; }
   if (id === "ALL") {
     const times = Object.values(playlistCache ?? {}).map((e) => e.fetchedAt).filter(Boolean);
-    if (times.length === 0) { el.textContent = "Not yet loaded."; return; }
-    el.textContent = `Oldest refreshed ${humanAgo(Math.min(...times))}`;
+    if (times.length === 0) { el.textContent = "Not loaded yet"; return; }
+    // Across many playlists the honest figure is the staleset one, so label it
+    // "Oldest" rather than implying everything was fetched at that moment.
+    el.textContent = `Oldest: ${humanAgo(Math.min(...times))}`;
   } else {
     const entry = playlistCache?.[id];
-    el.textContent = entry ? `Refreshed ${humanAgo(entry.fetchedAt)}` : "Not yet loaded.";
+    el.textContent = entry ? `Refreshed ${humanAgo(entry.fetchedAt)}` : "Not loaded yet";
   }
 }
 
@@ -271,9 +273,16 @@ function renderProgress(loadProgress) {
   container.hidden = false;
   const pct = loadProgress.total > 0 ? Math.round((loadProgress.done / loadProgress.total) * 100) : 0;
   fill.style.width = `${pct}%`;
+  // Colour is meaningful here: blue while working, green once finished, red only
+  // when the load actually failed. Progress is never red.
+  const failed = Boolean(loadProgress.error);
+  fill.classList.toggle("failed", failed);
+  fill.classList.toggle("complete", !failed && !loadProgress.active);
   text.textContent = loadProgress.active
     ? `Loading ${loadProgress.done}/${loadProgress.total}${loadProgress.currentTitle ? `: ${loadProgress.currentTitle}` : ""}`
-    : `Loaded ${loadProgress.done}/${loadProgress.total}.`;
+    : failed
+      ? `Stopped after ${loadProgress.done}/${loadProgress.total}.`
+      : `Loaded ${loadProgress.done}/${loadProgress.total}.`;
 }
 
 function renderFromState(s) {
@@ -376,7 +385,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("source-mine").addEventListener("change", () => onSourceChange("mine"));
   document.getElementById("source-link").addEventListener("change", () => onSourceChange("link"));
   document.getElementById("playlist-select").addEventListener("change", (e) => onSelectChange(e.target.value));
-  document.getElementById("refresh-link").addEventListener("click", onRefreshClick);
+  document.getElementById("refresh-btn").addEventListener("click", onRefreshClick);
 
   const linkInput = document.getElementById("link-input");
   linkInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); onLinkSubmit(); } });
