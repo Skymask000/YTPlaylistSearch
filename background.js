@@ -20,11 +20,14 @@ const DEFAULT_UI_STATE = {
 let cacheWriteChain = Promise.resolve();
 
 function updatePlaylistCache(mutate) {
-  cacheWriteChain = cacheWriteChain.then(async () => {
+  const run = cacheWriteChain.then(async () => {
     const cur = (await chrome.storage.local.get("playlistCache")).playlistCache ?? {};
     await chrome.storage.local.set({ playlistCache: mutate(cur) });
   });
-  return cacheWriteChain;
+  // Park a SETTLED copy on the chain so one failed write can't poison later ones.
+  // `run` is returned unchanged, so this call's caller still sees its own rejection.
+  cacheWriteChain = run.catch(() => {});
+  return run;
 }
 
 async function readAll() {
