@@ -308,6 +308,37 @@ async function onFontStep(delta) {
   await chrome.runtime.sendMessage({ action: "setUiState", patch: { fontScale: next } });
 }
 
+const WIDTH_MIN = 360;
+const WIDTH_MAX = 780;
+const WIDTH_DEFAULT = 520;
+let lastPersistedWidth = null;
+let widthPersistTimer = null;
+
+// Applied ONCE at startup, not from renderFromState. Persisting a drag writes
+// storage, which fires onChanged, which re-renders — re-applying the width there
+// would fight the user mid-drag.
+function initPopupWidth(uiState) {
+  const app = document.getElementById("app");
+  if (!app) return;
+  const raw = Number(uiState?.popupWidth);
+  const w = Number.isFinite(raw)
+    ? Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, raw))
+    : WIDTH_DEFAULT;
+  app.style.width = `${w}px`;
+  lastPersistedWidth = w;
+
+  if (typeof ResizeObserver === "undefined") return;
+  new ResizeObserver(() => {
+    clearTimeout(widthPersistTimer);
+    widthPersistTimer = setTimeout(async () => {
+      const next = Math.round(app.getBoundingClientRect?.().width ?? 0);
+      if (!next || next === lastPersistedWidth) return;
+      lastPersistedWidth = next;
+      await chrome.runtime.sendMessage({ action: "setUiState", patch: { popupWidth: next } });
+    }, 300); // debounce: a drag fires this continuously
+  }).observe(app);
+}
+
 function renderFromState(s) {
   // Runs before the signed-out early return: text size is a display preference,
   // so it must apply to the sign-in screen too.
@@ -427,6 +458,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   chrome.storage.onChanged.addListener(fetchState);
   await fetchState();
+  initPopupWidth(state?.uiState);   // once, after state is known
 
   // Auto-refresh playlist index on first sign-in if missing.
   if (state?.authIdentity && !state?.playlistIndex) {
