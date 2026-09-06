@@ -289,7 +289,29 @@ function renderProgress(loadProgress) {
       : `Loaded ${loadProgress.done}/${loadProgress.total}.`;
 }
 
+const FONT_MIN = 11;
+const FONT_MAX = 18;
+const FONT_DEFAULT = 13;
+
+function renderFontScale(uiState) {
+  const raw = Number(uiState?.fontScale);
+  const scale = Number.isFinite(raw) ? Math.min(FONT_MAX, Math.max(FONT_MIN, raw)) : FONT_DEFAULT;
+  document.documentElement.style.setProperty("--base", `${scale}px`);
+  document.getElementById("font-smaller").disabled = scale <= FONT_MIN;
+  document.getElementById("font-larger").disabled = scale >= FONT_MAX;
+}
+
+async function onFontStep(delta) {
+  const cur = Number(state?.uiState?.fontScale) || FONT_DEFAULT;
+  const next = Math.min(FONT_MAX, Math.max(FONT_MIN, cur + delta));
+  if (next === cur) return;
+  await chrome.runtime.sendMessage({ action: "setUiState", patch: { fontScale: next } });
+}
+
 function renderFromState(s) {
+  // Runs before the signed-out early return: text size is a display preference,
+  // so it must apply to the sign-in screen too.
+  renderFontScale(s?.uiState);
   renderIdentity(s?.authIdentity);
   if (!s?.authIdentity) {
     document.getElementById("source-fieldset").hidden = true;
@@ -396,6 +418,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   linkInput.addEventListener("blur", onLinkSubmit);
 
   document.getElementById("filter-input").addEventListener("input", (e) => onFilterInput(e.target.value));
+  document.getElementById("font-smaller").addEventListener("click", () => onFontStep(-1));
+  document.getElementById("font-larger").addEventListener("click", () => onFontStep(+1));
   document.getElementById("scope-song").addEventListener("change", onScopeChange);
   document.getElementById("scope-channel").addEventListener("change", onScopeChange);
   document.getElementById("scope-description").addEventListener("change", onScopeChange);
