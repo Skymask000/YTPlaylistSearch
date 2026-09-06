@@ -52,10 +52,19 @@ body {
   flex-direction: column;
   resize: horizontal;
   overflow: hidden;
+  /* Chrome anchors the popup's RIGHT edge to the toolbar icon, so the window
+     grows leftward. The native resize grip normally sits bottom-right, which
+     means dragging right made the popup expand left — backwards. CSS only ever
+     places the grip at the inline-end corner, so flipping direction to rtl
+     moves it to the bottom-LEFT, where the edge actually moves. Children get
+     `direction: ltr` back immediately below, so nothing else is affected. */
+  direction: rtl;
 }
 
-/* Only the results list absorbs the squeeze; everything above it keeps its
-   natural height instead of being compressed. */
+/* Undo the rtl above for all content — it exists purely to reposition the grip.
+   Also: only the results list absorbs the vertical squeeze; everything above it
+   keeps its natural height rather than being compressed. */
+#app > * { direction: ltr; }
 #app > *:not(#results) { flex-shrink: 0; }
 
 #app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
