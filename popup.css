@@ -23,6 +23,10 @@ body {
   margin: 0;
   padding: 12px 14px;
   min-width: 480px;
+  /* Without a ceiling the popup grows to fit the longest song title, because a
+     nowrap element's natural width is its full text. Cap it so one very long
+     title can't stretch the whole window. */
+  max-width: 760px;
   min-height: 200px;
   line-height: 1.4;
 }
@@ -103,3 +107,32 @@ button { padding: 4px 10px; cursor: pointer; }
 
 #status-line { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 16px; }
 #status-line.error { color: var(--danger); }
+
+/* ---------------------------------------------------------------------------
+   Narrow viewports (phone browsers that support extensions - Kiwi on Android,
+   Orion on iOS). Desktop keeps single-line rows because they scan faster; on a
+   phone there isn't the width for that, so titles wrap to two lines instead of
+   truncating to something unreadable.
+   --------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  body {
+    min-width: 0;          /* let the popup follow a narrow viewport */
+    padding: 10px;
+  }
+
+  #playlist-row { flex-wrap: wrap; }
+  #refresh-btn { width: 100%; }
+
+  .item-row { align-items: flex-start; }
+  .item-title {
+    white-space: normal;               /* allow wrapping... */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;             /* ...but stop at two lines, then ellipsis */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .item-actions { padding-top: 2px; }
+
+  /* a phone popup gets more of the screen than a desktop one */
+  #results { max-height: 60vh; }
+}
