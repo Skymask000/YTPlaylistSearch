@@ -162,6 +162,12 @@ button { padding: 4px 10px; cursor: pointer; }
 
 #status-line { margin-top: 8px; font-size: 0.92rem; color: var(--muted); min-height: 16px; }
 #status-line.error { color: var(--danger); }
+/* setStatus("") empties the node, so :empty matches and the line collapses,
+   handing its ~24px back to the results list. That extra height means the list
+   usually ends mid-row, which is the clearest signal that more is below —
+   better than a permanent dead strip above the resize grip. The reserved height
+   only exists while a message is actually showing. */
+#status-line:empty { display: none; }
 
 /* ---------------------------------------------------------------------------
    Narrow viewports (phone browsers that support extensions - Kiwi on Android,
