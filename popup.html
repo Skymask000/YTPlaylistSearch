@@ -26,11 +26,25 @@
     <span id="signed-out-cta" hidden>Sign in to search your playlists.</span>
   </div>
 
-  <fieldset id="source-fieldset">
-    <legend>Playlist source</legend>
-    <label><input type="radio" name="source" id="source-mine" value="mine" checked /> My playlists</label>
-    <label><input type="radio" name="source" id="source-link" value="link" /> Link</label>
-  </fieldset>
+  <details id="options">
+    <summary>Search options<span id="options-summary"></span></summary>
+
+    <fieldset id="source-fieldset">
+      <legend>Playlist source</legend>
+      <label><input type="radio" name="source" id="source-mine" value="mine" checked /> My playlists</label>
+      <label><input type="radio" name="source" id="source-link" value="link" /> Link</label>
+    </fieldset>
+
+    <fieldset id="scope-fieldset">
+      <legend>Search in</legend>
+      <div id="scope-grid">
+        <label title="The video's title"><input type="checkbox" id="scope-song" checked /> Song name</label>
+        <label title="The video's own description text (first 500 characters) — not the channel's"><input type="checkbox" id="scope-description" checked /> Song description</label>
+        <label title="The channel that uploaded the video"><input type="checkbox" id="scope-channel" checked /> Channel name</label>
+        <label title="The title of the playlist the song sits in"><input type="checkbox" id="scope-playlist" checked /> Playlist name</label>
+      </div>
+    </fieldset>
+  </details>
 
   <div id="mine-area">
     <div id="playlist-row">
@@ -43,16 +57,6 @@
   <div id="link-area" hidden>
     <input id="link-input" type="text" placeholder="Paste a YouTube playlist or watch URL…" />
   </div>
-
-  <fieldset id="scope-fieldset">
-    <legend>Search in</legend>
-    <div id="scope-grid">
-      <label title="The video's title"><input type="checkbox" id="scope-song" checked /> Song name</label>
-      <label title="The video's own description text (first 500 characters) — not the channel's"><input type="checkbox" id="scope-description" checked /> Song description</label>
-      <label title="The channel that uploaded the video"><input type="checkbox" id="scope-channel" checked /> Channel name</label>
-      <label title="The title of the playlist the song sits in"><input type="checkbox" id="scope-playlist" checked /> Playlist name</label>
-    </div>
-  </fieldset>
 
   <!-- U+FE0E (variation selector-15) after the glyph asks for the monochrome
        text form rather than the colour emoji form -->
