@@ -132,7 +132,7 @@ button { padding: 4px 10px; cursor: pointer; }
 #options fieldset { border: none; padding: 0; margin: 10px 0 4px; }
 #options fieldset legend { padding: 0; font-size: 0.92rem; color: var(--muted); }
 
-#freshness { margin-top: 4px; color: var(--muted); font-size: 0.92rem; }
+#freshness { margin-top: 4px; color: var(--muted); font-size: 0.85rem; }  /* matches #progress-text */
 #freshness[hidden] { display: none !important; }
 
 #progress-container { margin: 6px 0; }
