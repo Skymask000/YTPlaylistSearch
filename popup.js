@@ -1,4 +1,5 @@
 let state = null;
+let lastSubmittedUrl = null;
 
 function setStatus(text, isError = false) {
   const el = document.getElementById("status-line");
@@ -73,7 +74,10 @@ function renderSourceAreas(uiState) {
   document.getElementById("source-link").checked = !isMine;
   document.getElementById("mine-area").hidden = !isMine;
   document.getElementById("link-area").hidden = isMine;
-  document.getElementById("link-input").value = uiState.linkUrl ?? "";
+  const linkInput = document.getElementById("link-input");
+  // Don't clobber what the user is actively typing — renderFromState runs on every
+  // storage change, which can land mid-keystroke.
+  if (document.activeElement !== linkInput) linkInput.value = uiState.linkUrl ?? "";
 }
 
 function renderPlaylistSelect(playlistIndex, selectedId) {
@@ -174,14 +178,27 @@ async function onRefreshClick() {
 
 async function onLinkSubmit() {
   const url = document.getElementById("link-input").value.trim();
-  if (!url) return;
+  // Enter and blur both call this, so clicking away after pressing Enter would
+  // otherwise refire the same load. Also stops an unchanged blur from refetching.
+  if (!url || url === lastSubmittedUrl) return;
+  lastSubmittedUrl = url;
   setStatus("Loading external playlist…");
   const res = await chrome.runtime.sendMessage({ action: "loadLinkPlaylist", url });
-  if (res?.error === "invalid_url") setStatus("Invalid YouTube URL — no playlist ID found.", true);
-  else if (res?.error === "playlist_not_found") setStatus("Playlist not found (private or removed).", true);
-  else if (res?.error === "not_signed_in") setStatus("You're signed out — sign in again to load playlists.", true);
-  else if (res?.error) setStatus(`Load failed: ${res.error}`, true);
-  else setStatus(`Loaded ${res.count} items.`);
+  if (res?.error === "invalid_url") {
+    lastSubmittedUrl = null;
+    setStatus("Invalid YouTube URL — no playlist ID found.", true);
+  } else if (res?.error === "playlist_not_found") {
+    lastSubmittedUrl = null;
+    setStatus("Playlist not found (private or removed).", true);
+  } else if (res?.error === "not_signed_in") {
+    lastSubmittedUrl = null;
+    setStatus("You're signed out — sign in again to load playlists.", true);
+  } else if (res?.error) {
+    lastSubmittedUrl = null;
+    setStatus(`Load failed: ${res.error}`, true);
+  } else {
+    setStatus(`Loaded ${res.count} items.`);
+  }
   // Persist the URL and the resolved playlist ID together, so Task 16 can select
   // the active link playlist by ID directly instead of string-matching the URL.
   await chrome.runtime.sendMessage({
