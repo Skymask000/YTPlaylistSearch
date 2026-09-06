@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>YT Playlist Search</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="identity-strip">
+    <img id="identity-avatar" alt="" hidden />
+    <span id="identity-name"></span>
+    <button id="sign-out-btn" type="button" hidden>Sign out</button>
+    <button id="add-account-btn" type="button" hidden>Add account</button>
+    <button id="sign-in-btn" type="button" hidden>Sign in with Google</button>
+    <span id="signed-out-cta" hidden>Sign in to search your playlists.</span>
+  </div>
+
+  <fieldset id="source-fieldset">
+    <legend>Playlist source</legend>
+    <label><input type="radio" name="source" id="source-mine" value="mine" checked /> My playlists</label>
+    <label><input type="radio" name="source" id="source-link" value="link" /> Link</label>
+  </fieldset>
+
+  <div id="mine-area">
+    <select id="playlist-select"></select>
+    <div id="freshness"><span id="last-refreshed"></span> <button id="refresh-link" type="button">refresh</button></div>
+  </div>
+
+  <div id="link-area" hidden>
+    <input id="link-input" type="text" placeholder="Paste a YouTube playlist or watch URL…" />
+  </div>
+
+  <fieldset id="scope-fieldset">
+    <legend>Search in</legend>
+    <label><input type="checkbox" id="scope-song" checked /> Song</label>
+    <label><input type="checkbox" id="scope-channel" /> Channel</label>
+    <label><input type="checkbox" id="scope-description" /> Description</label>
+    <label><input type="checkbox" id="scope-playlist" /> Playlist name</label>
+  </fieldset>
+
+  <input id="filter-input" type="search" placeholder="🔎 type to filter…" />
+
+  <div id="progress-container" hidden>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+    <div id="progress-text"></div>
+  </div>
+
+  <div id="results"></div>
+
+  <div id="status-line" role="status" aria-live="polite"></div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
