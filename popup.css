@@ -27,17 +27,19 @@
 body {
   margin: 0;
   padding: 12px 14px;
-  min-width: 480px;
-  /* Without a ceiling the popup grows to fit the longest song title, because a
-     nowrap element's natural width is its full text. Cap it so one very long
-     title can't stretch the whole window. */
-  max-width: 760px;
+  /* A fixed width, not a min/max range: with a range the popup resizes as the
+     longest visible title changes, which reads as jitter. 520px sits alongside
+     YT Playlist Builder's ~490px while leaving room for the Play buttons.
+     max-width keeps it inside a narrow phone viewport. */
+  width: 520px;
+  max-width: 100vw;
   min-height: 200px;
   line-height: 1.4;
 }
 
+#app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 /* matches YT Playlist Builder's title treatment */
-h1 { font-size: 1.15rem; margin: 0 0 8px 0; }
+h1 { font-size: 1.15rem; margin: 0; }
 
 fieldset {
   border: 1px solid var(--line);
@@ -55,6 +57,12 @@ button { padding: 4px 10px; cursor: pointer; }
 #identity-avatar[hidden] { display: none !important; }
 #identity-name { font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sign-out-btn[hidden], #add-account-btn[hidden], #sign-in-btn[hidden], #signed-out-cta[hidden] { display: none !important; }
+
+/* Two even columns, so the second column lines up instead of starting wherever
+   the first label happens to end (inline-block gave ragged columns). */
+#scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
+#scope-grid label { display: flex; align-items: center; gap: 6px; margin-right: 0; }
+#scope-grid input { flex-shrink: 0; margin: 0; }
 
 /* Text-size stepper. Deliberately fixed in px, not rem — the control that
    changes the size must not resize itself as you click it. */
@@ -127,11 +135,14 @@ button { padding: 4px 10px; cursor: pointer; }
    truncating to something unreadable.
    --------------------------------------------------------------------------- */
 @media (max-width: 480px) {
-  body {
-    min-width: 0;          /* let the popup follow a narrow viewport */
-    padding: 10px;
-  }
+  /* NB: no width override here. An earlier version set min-width:0 in this
+     block, which fed back on itself — the popup measured narrow, the query
+     fired, nothing pushed it back out, and it stayed collapsed at ~320px on
+     desktop. body's `width: 520px; max-width: 100vw` already handles both
+     cases, so this block only changes layout, never width. */
+  body { padding: 10px; }
 
+  #scope-grid { grid-template-columns: 1fr; }  /* one column when it's tight */
   #playlist-row { flex-wrap: wrap; }
   #refresh-btn { width: 100%; }
 
