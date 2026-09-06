@@ -340,6 +340,30 @@ function initPopupWidth(uiState) {
   applyWidth(lastPersistedWidth);
 }
 
+const SCOPE_LABELS = { song: "song", description: "description", channel: "channel", playlist: "playlist" };
+
+// Keeps the collapsed header informative — otherwise folding the options away
+// hides which source and which fields are actually in effect.
+function renderOptionsSummary(uiState) {
+  const el = document.getElementById("options-summary");
+  if (!el) return;
+  const src = uiState?.source === "link" ? "Link" : "My playlists";
+  const on = Object.keys(SCOPE_LABELS).filter((k) => uiState?.scopes?.[k]);
+  const fields =
+    on.length === 0 ? "no fields"
+    : on.length === Object.keys(SCOPE_LABELS).length ? "all fields"
+    : on.map((k) => SCOPE_LABELS[k]).join(", ");
+  el.textContent = ` — ${src} · ${fields}`;
+}
+
+// Open/closed is applied once at startup, like the width: the toggle listener
+// writes state, which fires onChanged, so re-applying it from a render would be
+// a second path to the same value.
+function initOptionsOpen(uiState) {
+  const d = document.getElementById("options");
+  if (d) d.open = uiState?.optionsOpen !== false;
+}
+
 function renderWidthButtons(uiState) {
   const raw = Number(uiState?.popupWidth);
   const w = Number.isFinite(raw) ? clampWidth(raw) : WIDTH_DEFAULT;
@@ -361,18 +385,17 @@ function renderFromState(s) {
   // so it must apply to the sign-in screen too.
   renderFontScale(s?.uiState);
   renderWidthButtons(s?.uiState);
+  renderOptionsSummary(s?.uiState);
   renderIdentity(s?.authIdentity);
   if (!s?.authIdentity) {
-    document.getElementById("source-fieldset").hidden = true;
+    document.getElementById("options").hidden = true;
     document.getElementById("mine-area").hidden = true;
     document.getElementById("link-area").hidden = true;
-    document.getElementById("scope-fieldset").hidden = true;
     document.getElementById("filter-input").hidden = true;
     document.getElementById("results").innerHTML = "";
     return;
   }
-  document.getElementById("source-fieldset").hidden = false;
-  document.getElementById("scope-fieldset").hidden = false;
+  document.getElementById("options").hidden = false;
   document.getElementById("filter-input").hidden = false;
   renderSourceAreas(s.uiState);
   renderPlaylistSelect(s.playlistIndex, s.uiState.selectedPlaylistId);
@@ -478,7 +501,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   chrome.storage.onChanged.addListener(fetchState);
   await fetchState();
-  initPopupWidth(state?.uiState);   // once, after state is known
+  initPopupWidth(state?.uiState);
+  initOptionsOpen(state?.uiState);
+  document.getElementById("options").addEventListener("toggle", (e) => {
+    chrome.runtime.sendMessage({ action: "setUiState", patch: { optionsOpen: e.target.open } });
+  });   // once, after state is known
 
   // Auto-refresh playlist index on first sign-in if missing.
   if (state?.authIdentity && !state?.playlistIndex) {

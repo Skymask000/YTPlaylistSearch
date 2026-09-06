@@ -113,8 +113,24 @@ button { padding: 4px 10px; cursor: pointer; }
 /* dropdown and its Refresh button share one row */
 #playlist-row { display: flex; align-items: center; gap: 6px; }
 #playlist-row[hidden] { display: none !important; }
-#playlist-select { flex: 1; min-width: 0; }
+/* `width: 0` alongside flex-grow is what actually lets a <select> shrink. A
+   select carries a UA intrinsic minimum from its widest option, and min-width:0
+   alone does not defeat it, so it refused to narrow with the popup. Growing it
+   from zero instead makes it track the available space exactly. */
+#playlist-select { flex: 1 1 0; width: 0; min-width: 0; }
 #refresh-btn { flex-shrink: 0; }
+
+/* Collapsible options. Source and search scopes change rarely, so they fold away
+   to give the results list more room; the summary keeps the current settings
+   readable while collapsed. */
+#options { margin: 12px 0; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+#options[hidden] { display: none !important; }
+#options > summary { cursor: pointer; font-weight: 500; user-select: none; }
+#options > summary:hover { color: var(--progress); }
+#options-summary { font-weight: 400; color: var(--muted); }
+/* fieldsets drop their own frames inside the container, to avoid a box in a box */
+#options fieldset { border: none; padding: 0; margin: 10px 0 4px; }
+#options fieldset legend { padding: 0; font-size: 0.92rem; color: var(--muted); }
 
 #freshness { margin-top: 4px; color: var(--muted); font-size: 0.92rem; }
 #freshness[hidden] { display: none !important; }
