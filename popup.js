@@ -344,10 +344,24 @@ const SCOPE_LABELS = { song: "song", description: "description", channel: "chann
 
 // Keeps the collapsed header informative — otherwise folding the options away
 // hides which source and which fields are actually in effect.
-function renderOptionsSummary(uiState) {
+function renderOptionsSummary(s) {
   const el = document.getElementById("options-summary");
   if (!el) return;
-  const src = uiState?.source === "link" ? "Link" : "My playlists";
+  const uiState = s?.uiState;
+
+  // The playlist dropdown now lives inside the collapsed section, so the summary
+  // has to name the active playlist — otherwise collapsing hides what is
+  // actually being searched.
+  let src;
+  if (uiState?.source === "link") {
+    src = "Link";
+  } else if (!uiState?.selectedPlaylistId || uiState.selectedPlaylistId === "ALL") {
+    src = "All playlists";
+  } else {
+    const meta = s?.playlistIndex?.items?.find((p) => p.id === uiState.selectedPlaylistId);
+    src = meta?.title ?? "1 playlist";
+  }
+
   const on = Object.keys(SCOPE_LABELS).filter((k) => uiState?.scopes?.[k]);
   const fields =
     on.length === 0 ? "no fields"
@@ -385,7 +399,7 @@ function renderFromState(s) {
   // so it must apply to the sign-in screen too.
   renderFontScale(s?.uiState);
   renderWidthButtons(s?.uiState);
-  renderOptionsSummary(s?.uiState);
+  renderOptionsSummary(s);
   renderIdentity(s?.authIdentity);
   if (!s?.authIdentity) {
     document.getElementById("options").hidden = true;
