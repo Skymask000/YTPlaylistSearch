@@ -20,9 +20,17 @@ Sister project of [YT Playlist Builder](https://github.com/Skymask000/YTPlaylist
 
 ## Setup (OAuth client)
 
-Before sign-in works, replace `oauth2.client_id` in `manifest.json` with a real Google Cloud OAuth **Web application** client ID whose authorized redirect URI matches `https://<extension-id>.chromiumapp.org/` (trailing slash required). The extension ID is visible on `chrome://extensions` after Load unpacked.
+Before sign-in works, replace `oauth2.client_id` in `manifest.json` with your own Google Cloud OAuth client ID. It must be of type **Web application** — the "Chrome Extension" type fails with `unsupported_response_type` under `launchWebAuthFlow`.
 
-The extension requests the `https://www.googleapis.com/auth/youtube` scope. During Google Cloud Testing mode, only listed test users can sign in.
+The manifest pins the extension ID via its `key` field, so every install shares the same ID and the authorized redirect URI is always:
+
+```
+https://kghaamkjjfpambaecaidpaceblnndhmp.chromiumapp.org/
+```
+
+Add that under **Authorized redirect URIs** (the box at the bottom of the OAuth client page, not "Authorized JavaScript origins" at the top). The trailing slash is required.
+
+The extension requests the `https://www.googleapis.com/auth/youtube` scope, which Google classifies as sensitive. Until an app using it passes OAuth verification it stays in Testing mode, where **only accounts on the project's test-user list can sign in** — everyone else is stopped with an "unverified app" warning.
 
 ## Tests
 
