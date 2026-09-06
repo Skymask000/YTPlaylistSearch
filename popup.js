@@ -311,47 +311,56 @@ async function onFontStep(delta) {
 const WIDTH_MIN = 360;
 const WIDTH_MAX = 780;
 const WIDTH_DEFAULT = 520;
+const WIDTH_STEP = 40;
 let lastPersistedWidth = null;
-let widthPersistTimer = null;
 
 // Applied ONCE at startup, not from renderFromState. Persisting a drag writes
 // storage, which fires onChanged, which re-renders — re-applying the width there
 // would fight the user mid-drag.
 //
-// Persistence is deliberately NOT a ResizeObserver. An earlier version used one
-// and the popup oscillated between narrow and wide, with Chrome reporting
-// "ResizeObserver loop completed with undelivered notifications": the callback
-// wrote storage -> onChanged -> re-render -> layout shift -> observer fired
-// again, forever. Listening for the end of a drag instead means exactly one
-// measurement, after the user has stopped, with nothing to feed back.
-function initPopupWidth(uiState) {
-  const app = document.getElementById("app");
-  if (!app) return;
-  const raw = Number(uiState?.popupWidth);
-  const w = Number.isFinite(raw)
-    ? Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, raw))
-    : WIDTH_DEFAULT;
-  app.style.width = `${w}px`;
-  lastPersistedWidth = w;
+// Width is stepped, not dragged. Two earlier attempts used a CSS resize grip and
+// both flickered badly: each frame of a drag resizes the popup *window*, and
+// Chrome repositions it because the right edge is anchored to the toolbar icon.
+// Discrete steps change the width once per click, so there is nothing to flicker.
+function clampWidth(px) {
+  return Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, px));
+}
 
-  const persistWidth = () => {
-    clearTimeout(widthPersistTimer);
-    widthPersistTimer = setTimeout(async () => {
-      const next = Math.round(app.getBoundingClientRect?.().width ?? 0);
-      if (!next || next === lastPersistedWidth) return;
-      lastPersistedWidth = next;
-      await chrome.runtime.sendMessage({ action: "setUiState", patch: { popupWidth: next } });
-    }, 150);
-  };
-  // pointerup covers mouse, pen and touch; on `document` so a drag that ends
-  // outside #app still registers.
-  document.addEventListener("pointerup", persistWidth);
+function applyWidth(px) {
+  const app = document.getElementById("app");
+  if (app) app.style.width = `${px}px`;
+}
+
+// Applied once at startup; thereafter only the buttons change it. Deliberately
+// not driven from renderFromState — a width write fires storage.onChanged, and
+// re-applying width from a render would be a second path to the same value.
+function initPopupWidth(uiState) {
+  const raw = Number(uiState?.popupWidth);
+  lastPersistedWidth = Number.isFinite(raw) ? clampWidth(raw) : WIDTH_DEFAULT;
+  applyWidth(lastPersistedWidth);
+}
+
+function renderWidthButtons(uiState) {
+  const raw = Number(uiState?.popupWidth);
+  const w = Number.isFinite(raw) ? clampWidth(raw) : WIDTH_DEFAULT;
+  document.getElementById("width-smaller").disabled = w <= WIDTH_MIN;
+  document.getElementById("width-larger").disabled = w >= WIDTH_MAX;
+}
+
+async function onWidthStep(delta) {
+  const cur = Number(state?.uiState?.popupWidth) || WIDTH_DEFAULT;
+  const next = clampWidth(cur + delta * WIDTH_STEP);
+  if (next === clampWidth(cur)) return;
+  lastPersistedWidth = next;
+  applyWidth(next);   // apply immediately so the click feels instant
+  await chrome.runtime.sendMessage({ action: "setUiState", patch: { popupWidth: next } });
 }
 
 function renderFromState(s) {
   // Runs before the signed-out early return: text size is a display preference,
   // so it must apply to the sign-in screen too.
   renderFontScale(s?.uiState);
+  renderWidthButtons(s?.uiState);
   renderIdentity(s?.authIdentity);
   if (!s?.authIdentity) {
     document.getElementById("source-fieldset").hidden = true;
@@ -460,6 +469,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("filter-input").addEventListener("input", (e) => onFilterInput(e.target.value));
   document.getElementById("font-smaller").addEventListener("click", () => onFontStep(-1));
   document.getElementById("font-larger").addEventListener("click", () => onFontStep(+1));
+  document.getElementById("width-smaller").addEventListener("click", () => onWidthStep(-1));
+  document.getElementById("width-larger").addEventListener("click", () => onWidthStep(+1));
   document.getElementById("scope-song").addEventListener("change", onScopeChange);
   document.getElementById("scope-channel").addEventListener("change", onScopeChange);
   document.getElementById("scope-description").addEventListener("change", onScopeChange);
