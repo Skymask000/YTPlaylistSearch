@@ -31,9 +31,9 @@ body {
   overflow: hidden;    /* the body must never scroll — see #app below */
 }
 
-/* Width lives on #app rather than body so the user can drag it. Chrome caps
-   popups at 800px wide and the body padding eats ~28px, so 780 is the ceiling.
-   `overflow: hidden` is required for `resize` to take effect at all.
+/* Width lives on #app rather than body so the ⇤/⇥ buttons can change it in one
+   place. Chrome caps popups at 800px wide and the body padding eats ~28px, so
+   780 is the ceiling.
 
    NO vw/vh UNITS ANYWHERE IN THIS FILE. In an extension popup the viewport IS
    the content, so `max-width: 100vw` is circular — #app sets the popup width,
@@ -50,21 +50,16 @@ body {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  resize: horizontal;
   overflow: hidden;
-  /* Chrome anchors the popup's RIGHT edge to the toolbar icon, so the window
-     grows leftward. The native resize grip normally sits bottom-right, which
-     means dragging right made the popup expand left — backwards. CSS only ever
-     places the grip at the inline-end corner, so flipping direction to rtl
-     moves it to the bottom-LEFT, where the edge actually moves. Children get
-     `direction: ltr` back immediately below, so nothing else is affected. */
-  direction: rtl;
+  /* NO `resize: horizontal` here. A drag grip was tried twice and both times the
+     popup flickered badly: every frame of the drag resizes the popup *window*,
+     and Chrome repositions it because the right edge is anchored to the toolbar
+     icon. That repaint-per-frame is a platform behaviour, not something CSS can
+     smooth. Width is set in discrete steps by the ⇤/⇥ buttons instead. */
 }
 
-/* Undo the rtl above for all content — it exists purely to reposition the grip.
-   Also: only the results list absorbs the vertical squeeze; everything above it
-   keeps its natural height rather than being compressed. */
-#app > * { direction: ltr; }
+/* Only the results list absorbs the vertical squeeze; everything above it keeps
+   its natural height rather than being compressed. */
 #app > *:not(#results) { flex-shrink: 0; }
 
 #app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
@@ -94,12 +89,13 @@ button { padding: 4px 10px; cursor: pointer; }
 #scope-grid label { display: flex; align-items: center; gap: 6px; margin-right: 0; }
 #scope-grid input { flex-shrink: 0; margin: 0; }
 
-/* Text-size stepper. Deliberately fixed in px, not rem — the control that
-   changes the size must not resize itself as you click it. */
-#font-controls { display: flex; gap: 2px; flex-shrink: 0; }
-#font-controls[hidden] { display: none !important; }
-#font-controls button { font-size: 12px; line-height: 1; padding: 3px 7px; min-width: 28px; }
-#font-controls button:disabled { opacity: 0.4; cursor: default; }
+/* View controls: text size (A−/A+) and popup width (⇤/⇥). Sizes deliberately
+   fixed in px, not rem — a control that changes text size must not resize
+   itself as you click it. */
+#view-controls { display: flex; gap: 2px; flex-shrink: 0; }
+#view-controls[hidden] { display: none !important; }
+#view-controls button { font-size: 12px; line-height: 1; padding: 3px 7px; min-width: 28px; }
+#view-controls button:disabled { opacity: 0.4; cursor: default; }
 
 /* appearance only — sizing is handled per-field below, since the select
    sits in a flex row while the other inputs are full-width on their own */
