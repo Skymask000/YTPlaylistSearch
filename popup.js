@@ -270,8 +270,13 @@ function renderProgress(loadProgress) {
   const container = document.getElementById("progress-container");
   const fill = document.getElementById("progress-fill");
   const text = document.getElementById("progress-text");
-  if (!loadProgress?.active && !(loadProgress?.total > 0 && loadProgress.done === loadProgress.total)) {
+  // Show while running, when finished, AND when it failed part-way. Without the
+  // error case a partial failure (5 of 40) matched neither of the first two, so
+  // the bar silently vanished instead of reporting what had gone wrong.
+  const finished = loadProgress?.total > 0 && loadProgress.done === loadProgress.total;
+  if (!loadProgress?.active && !finished && !loadProgress?.error) {
     container.hidden = true;
+    text.textContent = "";
     return;
   }
   container.hidden = false;
@@ -282,11 +287,14 @@ function renderProgress(loadProgress) {
   const failed = Boolean(loadProgress.error);
   fill.classList.toggle("failed", failed);
   fill.classList.toggle("complete", !failed && !loadProgress.active);
+  // Say what the numbers count — "78/78" alone does not tell you whether those
+  // are playlists or songs.
+  const n = `${loadProgress.done}/${loadProgress.total} playlists`;
   text.textContent = loadProgress.active
-    ? `Loading ${loadProgress.done}/${loadProgress.total}${loadProgress.currentTitle ? `: ${loadProgress.currentTitle}` : ""}`
+    ? `Loading ${n}${loadProgress.currentTitle ? `: ${loadProgress.currentTitle}` : ""}`
     : failed
-      ? `Stopped after ${loadProgress.done}/${loadProgress.total}.`
-      : `Loaded ${loadProgress.done}/${loadProgress.total}.`;
+      ? `Stopped after ${n}.`
+      : `Loaded ${n}.`;
 }
 
 const FONT_MIN = 11;
@@ -348,6 +356,13 @@ function renderOptionsSummary(s) {
   const el = document.getElementById("options-summary");
   if (!el) return;
   const uiState = s?.uiState;
+
+  // The progress bar lives inside this section now, so collapsing mid-load would
+  // otherwise hide it completely. Surface the count in the header while running.
+  if (s?.loadProgress?.active) {
+    el.textContent = ` — loading ${s.loadProgress.done}/${s.loadProgress.total} playlists…`;
+    return;
+  }
 
   // The playlist dropdown now lives inside the collapsed section, so the summary
   // has to name the active playlist — otherwise collapsing hides what is

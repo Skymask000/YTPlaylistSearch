@@ -40,11 +40,20 @@
         <select id="playlist-select"></select>
         <button id="refresh-btn" type="button" title="Re-fetch from YouTube, ignoring the cache">Refresh Playlists</button>
       </div>
-      <div id="freshness"><span id="last-refreshed"></span></div>
     </div>
 
     <div id="link-area" hidden>
       <input id="link-input" type="text" placeholder="Paste a YouTube playlist or watch URL…" />
+    </div>
+
+    <div id="progress-container" hidden>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+
+    <!-- one status line: "Loaded 78/78 playlists. · Refreshed 4m ago" -->
+    <div id="load-status">
+      <span id="progress-text"></span>
+      <span id="freshness"><span id="last-refreshed"></span></span>
     </div>
 
     <fieldset id="scope-fieldset">
@@ -61,11 +70,6 @@
   <!-- U+FE0E (variation selector-15) after the glyph asks for the monochrome
        text form rather than the colour emoji form -->
   <input id="filter-input" type="search" placeholder="🔍︎ type to filter…" />
-
-  <div id="progress-container" hidden>
-    <div id="progress-bar"><div id="progress-fill"></div></div>
-    <div id="progress-text"></div>
-  </div>
 
   <div id="results"></div>
 
