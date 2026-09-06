@@ -10,7 +10,7 @@ const DEFAULT_UI_STATE = {
   linkUrl: "",
   linkPlaylistId: "",
   query: "",
-  scopes: { song: true, channel: false, description: false, playlist: false },
+  scopes: { song: true, channel: true, description: true, playlist: true },
   expandedGroups: {},
   fontScale: 13, // px; drives --base in popup.css. Clamped 11-18 by the popup.
   popupWidth: 520, // px; user-draggable. Clamped 360-780 (Chrome caps popups at 800).
