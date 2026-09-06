@@ -44,6 +44,16 @@ function updatePlaylistCache(mutate, generation) {
   return run;
 }
 
+// `loadProgress` describes a specific session's load, so it is subject to the same
+// generation rule as playlistCache: a session superseded by a sign-out or account
+// switch must not write it. Without this the cache write is correctly dropped while
+// the progress write that follows it still lands, leaving the previous account's
+// "Loaded N/N" bar sitting above an empty library.
+async function setLoadProgress(loadProgress, generation) {
+  if (generation !== cacheGeneration) return;
+  await chrome.storage.local.set({ loadProgress });
+}
+
 async function readAll() {
   const s = await chrome.storage.local.get([
     "authIdentity",
@@ -92,7 +102,7 @@ async function handleSignIn(switchAccount) {
       // A new identity is now established: the previous account's playlist
       // library must not remain visible/searchable under it.
       cacheGeneration += 1;
-      await chrome.storage.local.remove(["playlistIndex", "playlistCache"]);
+      await chrome.storage.local.remove(["playlistIndex", "playlistCache", "loadProgress"]);
     }
     return { ok: true, identity };
   } catch (err) {
@@ -104,7 +114,7 @@ async function handleSignIn(switchAccount) {
 async function handleSignOut() {
   cacheGeneration += 1;
   await clearAuthToken();
-  await chrome.storage.local.remove(["authIdentity", "playlistIndex", "playlistCache"]);
+  await chrome.storage.local.remove(["authIdentity", "playlistIndex", "playlistCache", "loadProgress"]);
   return { ok: true };
 }
 
@@ -162,10 +172,10 @@ async function handleLoadAllPlaylists(force) {
     const targets = force ? idx : idx.filter((p) => !(p.id in cache));
     total = targets.length;
     if (total === 0) {
-      await chrome.storage.local.set({ loadProgress: { active: false, done: 0, total: 0 } });
+      await setLoadProgress({ active: false, done: 0, total: 0 }, gen);
       return { ok: true, addedCount: 0 };
     }
-    await chrome.storage.local.set({ loadProgress: { active: true, done: 0, total, currentTitle: "" } });
+    await setLoadProgress({ active: true, done: 0, total, currentTitle: "" }, gen);
 
     const tasks = targets.map((p) => async () => {
       // Session ended (sign-out / account switch) while this task was still
@@ -183,23 +193,20 @@ async function handleLoadAllPlaylists(force) {
         },
       }), gen);
       done += 1;
-      await chrome.storage.local.set({
-        loadProgress: { active: done < total, done, total, currentTitle: p.title },
-      });
+      await setLoadProgress({ active: done < total, done, total, currentTitle: p.title }, gen);
     });
     await withConcurrency(5, tasks);
     // Authoritative terminal state: per-worker progress writes can land out of order,
     // so the last one to arrive isn't necessarily the one with the highest `done`.
-    await chrome.storage.local.set({
-      loadProgress: { active: false, done: total, total, currentTitle: "" },
-    });
+    await setLoadProgress({ active: false, done: total, total, currentTitle: "" }, gen);
     return { ok: true, addedCount: total };
   } catch (err) {
-    await chrome.storage.local.set({
-      // Report real counts: playlists fetched before the failure are already cached
-      // and searchable, so `0/0` would tell the user nothing loaded when most did.
-      loadProgress: { active: false, done, total, currentTitle: "", error: String(err?.message ?? err) },
-    });
+    // Report real counts: playlists fetched before the failure are already cached
+    // and searchable, so `0/0` would tell the user nothing loaded when most did.
+    await setLoadProgress(
+      { active: false, done, total, currentTitle: "", error: String(err?.message ?? err) },
+      gen,
+    );
     if (err instanceof NotSignedInError) return { error: "not_signed_in" };
     throw err;
   }
