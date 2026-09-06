@@ -13,6 +13,20 @@ const DEFAULT_UI_STATE = {
   expandedGroups: {},
 };
 
+// All playlistCache read-modify-writes funnel through this chain. Each mutator
+// re-reads storage at the moment it runs, so a write that lands during another
+// handler's await can't be clobbered by a stale snapshot. A later task runs five
+// fetches concurrently and depends on this.
+let cacheWriteChain = Promise.resolve();
+
+function updatePlaylistCache(mutate) {
+  cacheWriteChain = cacheWriteChain.then(async () => {
+    const cur = (await chrome.storage.local.get("playlistCache")).playlistCache ?? {};
+    await chrome.storage.local.set({ playlistCache: mutate(cur) });
+  });
+  return cacheWriteChain;
+}
+
 async function readAll() {
   const s = await chrome.storage.local.get([
     "authIdentity",
@@ -110,8 +124,7 @@ async function handleLoadPlaylist(playlistId, force) {
       source: "mine",
       items,
     };
-    const nextCache = { ...cache, [playlistId]: entry };
-    await chrome.storage.local.set({ playlistCache: nextCache });
+    await updatePlaylistCache((cur) => ({ ...cur, [playlistId]: entry }));
     return { ok: true, fromCache: false, count: items.length };
   } catch (err) {
     if (err instanceof NotSignedInError) return { error: "not_signed_in" };
