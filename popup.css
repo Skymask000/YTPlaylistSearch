@@ -52,7 +52,8 @@ body {
      frame: it grows with content up to the limit, then stops — so the body
      never needs a scrollbar of its own. */
   max-height: 580px;
-  padding: 12px 14px;
+  --pad: 14px;   /* side padding; #results cancels exactly this to reach the edge */
+  padding: 12px var(--pad);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -174,12 +175,17 @@ button { padding: 4px 10px; cursor: pointer; }
   flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
-  /* Reserve the scrollbar track up-front, so rows aren't laid out underneath it
-     and the Play buttons don't end up clipped. */
-  scrollbar-gutter: stable;
-  /* No padding-right: the ~15px gutter above already matches #app's 14px side
-     padding. An extra 8px here inset the rows ~23px on the right against 14px on
-     the left, so the Play buttons visibly missed the filter box edge above. */
+  /* Scrollbar placement. Two things were wrong before:
+       - scrollbar-gutter: stable RESERVES the track, but the scrollbar renders
+         IN it. Without padding, rows sit directly under the scrollbar and the
+         Play buttons get clipped. The gutter is not free space.
+       - with the gutter reserved AND padding, content ended ~29px from the right
+         edge against 14px on the left, which read as lopsided.
+     So: stretch into #app's right padding with a negative margin, letting the
+     scrollbar sit flush at the popup edge like normal window chrome, and give
+     the content the same 14px inset it has on the left. */
+  margin-right: calc(-1 * var(--pad));
+  padding-right: var(--pad);
 }
 .playlist-group { border-top: 1px solid var(--line-soft); padding: 4px 0; }
 .playlist-group-header { font-weight: 500; cursor: pointer; user-select: none; padding: 4px 2px; }
@@ -226,7 +232,9 @@ button { padding: 4px 10px; cursor: pointer; }
      query fired, nothing pushed it back out, and it stayed collapsed at ~320px
      on desktop. #app's px width is the single source of truth; this block only
      rearranges layout. */
-  body { padding: 10px; }
+  /* padding lives on #app, not body — shrinking --pad keeps #results’ negative
+     margin in step automatically. */
+  #app { --pad: 10px; padding: 10px var(--pad); }
 
   #scope-grid { grid-template-columns: 1fr; }  /* one column when it's tight */
   #playlist-row { flex-wrap: wrap; }
