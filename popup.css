@@ -27,20 +27,22 @@
 body {
   margin: 0;
   padding: 12px 14px;
-  max-width: 100vw;
   min-height: 200px;
   line-height: 1.4;
 }
 
 /* Width lives on #app rather than body so the user can drag it. Chrome caps
-   popups at 800px wide, and the body padding eats ~28px, so 780 is the useful
-   ceiling. A fixed starting width (not a min/max range) keeps the popup from
-   resizing itself as the longest visible title changes. `overflow: hidden` is
-   required for `resize` to take effect at all. */
+   popups at 800px wide and the body padding eats ~28px, so 780 is the ceiling.
+   `overflow: hidden` is required for `resize` to take effect at all.
+
+   NO vw/vh UNITS ANYWHERE IN THIS FILE. In an extension popup the viewport IS
+   the content, so `max-width: 100vw` is circular — #app sets the popup width,
+   which defines 100vw, which constrains #app — and the popup oscillates between
+   narrow and wide without ever settling. Everything here stays in px. */
 #app {
   width: 520px;
   min-width: 360px;
-  max-width: min(780px, 100vw);
+  max-width: 780px;
   resize: horizontal;
   overflow: hidden;
 }
@@ -143,11 +145,11 @@ button { padding: 4px 10px; cursor: pointer; }
    truncating to something unreadable.
    --------------------------------------------------------------------------- */
 @media (max-width: 480px) {
-  /* NB: no width override here. An earlier version set min-width:0 in this
-     block, which fed back on itself — the popup measured narrow, the query
-     fired, nothing pushed it back out, and it stayed collapsed at ~320px on
-     desktop. body's `width: 520px; max-width: 100vw` already handles both
-     cases, so this block only changes layout, never width. */
+  /* NB: this block must never change width or height. An earlier version set
+     min-width:0 here and it fed back on itself — the popup measured narrow, the
+     query fired, nothing pushed it back out, and it stayed collapsed at ~320px
+     on desktop. #app's px width is the single source of truth; this block only
+     rearranges layout. */
   body { padding: 10px; }
 
   #scope-grid { grid-template-columns: 1fr; }  /* one column when it's tight */
@@ -164,6 +166,7 @@ button { padding: 4px 10px; cursor: pointer; }
   }
   .item-actions { padding-top: 2px; }
 
-  /* a phone popup gets more of the screen than a desktop one */
-  #results { max-height: 60vh; }
+  /* px, not vh — popup height is content-driven too, so a vh here is circular
+     for the same reason 100vw was. */
+  #results { max-height: 420px; }
 }
