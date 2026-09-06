@@ -6,15 +6,17 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <h1>YT Playlist Search</h1>
-
-  <div id="identity-strip">
-    <img id="identity-avatar" alt="" hidden />
-    <span id="identity-name"></span>
+  <header id="app-header">
+    <h1>YT Playlist Search</h1>
     <span id="font-controls">
       <button id="font-smaller" type="button" title="Smaller text">A&minus;</button>
       <button id="font-larger" type="button" title="Larger text">A+</button>
     </span>
+  </header>
+
+  <div id="identity-strip">
+    <img id="identity-avatar" alt="" hidden />
+    <span id="identity-name"></span>
     <button id="sign-out-btn" type="button" hidden>Sign out</button>
     <button id="add-account-btn" type="button" hidden>Add account</button>
     <button id="sign-in-btn" type="button" hidden>Sign in with Google</button>
@@ -41,10 +43,12 @@
 
   <fieldset id="scope-fieldset">
     <legend>Search in</legend>
-    <label title="The video's title"><input type="checkbox" id="scope-song" checked /> Song name</label>
-    <label title="The video's own description text (first 500 characters) — not the channel's"><input type="checkbox" id="scope-description" /> Song description</label>
-    <label title="The channel that uploaded the video"><input type="checkbox" id="scope-channel" /> Channel name</label>
-    <label title="The title of the playlist the song sits in"><input type="checkbox" id="scope-playlist" /> Playlist name</label>
+    <div id="scope-grid">
+      <label title="The video's title"><input type="checkbox" id="scope-song" checked /> Song name</label>
+      <label title="The video's own description text (first 500 characters) — not the channel's"><input type="checkbox" id="scope-description" /> Song description</label>
+      <label title="The channel that uploaded the video"><input type="checkbox" id="scope-channel" /> Channel name</label>
+      <label title="The title of the playlist the song sits in"><input type="checkbox" id="scope-playlist" /> Playlist name</label>
+    </div>
   </fieldset>
 
   <!-- U+FE0E (variation selector-15) after the glyph asks for the monochrome
