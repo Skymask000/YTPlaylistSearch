@@ -38,6 +38,7 @@ button { cursor: pointer; }
 
 #mine-area select, #link-area input, #filter-input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
 #freshness { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--muted); font-size: 12px; }
+#freshness[hidden] { display: none !important; }
 #refresh-link { background: none; border: none; color: var(--accent); text-decoration: underline; padding: 0; font-size: 12px; }
 
 #progress-container { margin: 6px 0; }
