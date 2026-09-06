@@ -317,6 +317,13 @@ let widthPersistTimer = null;
 // Applied ONCE at startup, not from renderFromState. Persisting a drag writes
 // storage, which fires onChanged, which re-renders — re-applying the width there
 // would fight the user mid-drag.
+//
+// Persistence is deliberately NOT a ResizeObserver. An earlier version used one
+// and the popup oscillated between narrow and wide, with Chrome reporting
+// "ResizeObserver loop completed with undelivered notifications": the callback
+// wrote storage -> onChanged -> re-render -> layout shift -> observer fired
+// again, forever. Listening for the end of a drag instead means exactly one
+// measurement, after the user has stopped, with nothing to feed back.
 function initPopupWidth(uiState) {
   const app = document.getElementById("app");
   if (!app) return;
@@ -327,16 +334,18 @@ function initPopupWidth(uiState) {
   app.style.width = `${w}px`;
   lastPersistedWidth = w;
 
-  if (typeof ResizeObserver === "undefined") return;
-  new ResizeObserver(() => {
+  const persistWidth = () => {
     clearTimeout(widthPersistTimer);
     widthPersistTimer = setTimeout(async () => {
       const next = Math.round(app.getBoundingClientRect?.().width ?? 0);
       if (!next || next === lastPersistedWidth) return;
       lastPersistedWidth = next;
       await chrome.runtime.sendMessage({ action: "setUiState", patch: { popupWidth: next } });
-    }, 300); // debounce: a drag fires this continuously
-  }).observe(app);
+    }, 150);
+  };
+  // pointerup covers mouse, pen and touch; on `document` so a drag that ends
+  // outside #app still registers.
+  document.addEventListener("pointerup", persistWidth);
 }
 
 function renderFromState(s) {
