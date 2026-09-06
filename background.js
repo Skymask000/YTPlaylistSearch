@@ -12,6 +12,7 @@ const DEFAULT_UI_STATE = {
   query: "",
   scopes: { song: true, channel: false, description: false, playlist: false },
   expandedGroups: {},
+  fontScale: 13, // px; drives --base in popup.css. Clamped 11-18 by the popup.
 };
 
 // All playlistCache read-modify-writes funnel through this chain. Each mutator

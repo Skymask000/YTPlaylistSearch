@@ -3,7 +3,12 @@
      colour theme-neutral so the popup adapts instead of forcing a light sheet. */
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
-  font-size: 13px;
+
+  /* Single knob for text size — the A−/A+ control writes --base here and every
+     other size below is expressed in rem, so the whole popup scales together
+     instead of only the body text growing. */
+  --base: 13px;
+  font-size: var(--base);
 
   --line: rgba(128, 128, 128, 0.4);
   --line-soft: rgba(128, 128, 128, 0.25);
@@ -32,7 +37,7 @@ body {
 }
 
 /* matches YT Playlist Builder's title treatment */
-h1 { font-size: 15px; margin: 0 0 8px 0; }
+h1 { font-size: 1.15rem; margin: 0 0 8px 0; }
 
 fieldset {
   border: 1px solid var(--line);
@@ -50,6 +55,13 @@ button { padding: 4px 10px; cursor: pointer; }
 #identity-avatar[hidden] { display: none !important; }
 #identity-name { font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sign-out-btn[hidden], #add-account-btn[hidden], #sign-in-btn[hidden], #signed-out-cta[hidden] { display: none !important; }
+
+/* Text-size stepper. Deliberately fixed in px, not rem — the control that
+   changes the size must not resize itself as you click it. */
+#font-controls { display: flex; gap: 2px; flex-shrink: 0; }
+#font-controls[hidden] { display: none !important; }
+#font-controls button { font-size: 12px; line-height: 1; padding: 3px 7px; min-width: 28px; }
+#font-controls button:disabled { opacity: 0.4; cursor: default; }
 
 /* appearance only — sizing is handled per-field below, since the select
    sits in a flex row while the other inputs are full-width on their own */
@@ -70,7 +82,7 @@ button { padding: 4px 10px; cursor: pointer; }
 #playlist-select { flex: 1; min-width: 0; }
 #refresh-btn { flex-shrink: 0; }
 
-#freshness { margin-top: 4px; color: var(--muted); font-size: 12px; }
+#freshness { margin-top: 4px; color: var(--muted); font-size: 0.92rem; }
 #freshness[hidden] { display: none !important; }
 
 #progress-container { margin: 6px 0; }
@@ -79,7 +91,7 @@ button { padding: 4px 10px; cursor: pointer; }
 #progress-fill { background: var(--progress); height: 100%; width: 0%; transition: width 200ms, background 200ms; }
 #progress-fill.complete { background: var(--success); }
 #progress-fill.failed { background: var(--danger); }
-#progress-text { font-size: 11px; color: var(--muted); margin-top: 2px; }
+#progress-text { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
 
 #results {
   margin-top: 8px;
@@ -102,10 +114,10 @@ button { padding: 4px 10px; cursor: pointer; }
 .item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-title small { color: var(--muted); }
 .item-actions { flex-shrink: 0; }
-.item-actions button { font-size: 11px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line); }
+.item-actions button { font-size: 0.85rem; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line); }
 .item-actions button + button { margin-left: 4px; }
 
-#status-line { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 16px; }
+#status-line { margin-top: 8px; font-size: 0.92rem; color: var(--muted); min-height: 16px; }
 #status-line.error { color: var(--danger); }
 
 /* ---------------------------------------------------------------------------
