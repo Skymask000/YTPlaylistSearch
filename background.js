@@ -1,6 +1,7 @@
 import { getAuthToken, clearAuthToken, NotSignedInError } from "./src/auth.js";
 import { getMyChannel, listMyPlaylists } from "./src/ytApi.js";
 import { fetchPlaylistItems, withConcurrency } from "./src/ytPlaylistItems.js";
+import { extractPlaylistId } from "./src/parseLink.js";
 
 const DEFAULT_UI_STATE = {
   schemaVersion: 1,
@@ -191,6 +192,30 @@ async function handleLoadAllPlaylists(force) {
   }
 }
 
+async function handleLoadLinkPlaylist(url) {
+  const playlistId = extractPlaylistId(url);
+  if (!playlistId) return { error: "invalid_url" };
+  try {
+    const token = await getAuthToken({ interactive: false });
+    const items = await fetchPlaylistItems(token, playlistId);
+    await updatePlaylistCache((cur) => ({
+      ...cur,
+      [playlistId]: {
+        fetchedAt: Date.now(),
+        playlistId,
+        playlistTitle: "",
+        source: "link",
+        items,
+      },
+    }));
+    return { ok: true, playlistId, count: items.length };
+  } catch (err) {
+    if (err instanceof NotSignedInError) return { error: "not_signed_in" };
+    if (err?.message?.startsWith("playlist_not_found")) return { error: "playlist_not_found" };
+    throw err;
+  }
+}
+
 async function handleMessage(msg) {
   switch (msg?.action) {
     case "getState":
@@ -211,7 +236,7 @@ async function handleMessage(msg) {
     case "loadAllPlaylists":
       return await handleLoadAllPlaylists(msg.force === true);
     case "loadLinkPlaylist":
-      return { error: "not_implemented" };
+      return await handleLoadLinkPlaylist(msg.url);
     default:
       return { error: "unknown_action" };
   }
