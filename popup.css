@@ -1,42 +1,53 @@
 :root {
-  --fg: #111;
-  --muted: #666;
-  --border: #ccc;
-  --accent: #c00;
-  --bg: #fff;
-  --hover: #f5f5f5;
-  --err: #a00;
+  /* Match YT Playlist Builder: let the browser paint light/dark, and keep every
+     colour theme-neutral so the popup adapts instead of forcing a light sheet. */
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+
+  --line: rgba(128, 128, 128, 0.4);
+  --line-soft: rgba(128, 128, 128, 0.25);
+  --muted: #888;
+  --hover: rgba(128, 128, 128, 0.12);
+  --accent: #d33;
 }
 
 * { box-sizing: border-box; }
 body {
-  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: var(--fg);
-  background: var(--bg);
   margin: 0;
-  padding: 10px;
-  width: 380px;
+  padding: 12px 14px;
+  min-width: 480px;
   min-height: 200px;
+  line-height: 1.4;
 }
 
 fieldset {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 6px;
-  margin: 8px 0;
+  margin: 12px 0;
   padding: 6px 10px;
 }
-legend { font-weight: 600; padding: 0 4px; }
+legend { font-weight: 500; padding: 0 4px; }
 label { display: inline-block; margin-right: 10px; cursor: pointer; }
-button { cursor: pointer; }
+button { padding: 4px 10px; cursor: pointer; }
 
-#identity-strip { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+#identity-strip { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 #identity-strip[hidden] { display: none !important; }
-#identity-avatar { width: 24px; height: 24px; border-radius: 50%; }
+#identity-avatar { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; }
 #identity-avatar[hidden] { display: none !important; }
-#identity-name { font-weight: 600; flex: 1; }
+#identity-name { font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sign-out-btn[hidden], #add-account-btn[hidden], #sign-in-btn[hidden], #signed-out-cta[hidden] { display: none !important; }
 
-#mine-area select, #link-area input, #filter-input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
+#mine-area select, #link-area input, #filter-input {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+  /* inherit the page's light/dark surface rather than forcing white */
+  background: Field;
+  color: FieldText;
+}
 #freshness { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--muted); font-size: 12px; }
 #freshness[hidden] { display: none !important; }
 #refresh-link { background: none; border: none; color: var(--accent); text-decoration: underline; padding: 0; font-size: 12px; }
@@ -47,19 +58,20 @@ button { cursor: pointer; }
 #progress-fill { background: var(--accent); height: 100%; width: 0%; transition: width 200ms; }
 #progress-text { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-#results { margin-top: 8px; max-height: 320px; overflow-y: auto; }
-.playlist-group { border-top: 1px solid var(--border); padding: 4px 0; }
-.playlist-group-header { font-weight: 600; cursor: pointer; user-select: none; padding: 4px 2px; }
+#results { margin-top: 8px; max-height: 340px; overflow-y: auto; }
+.playlist-group { border-top: 1px solid var(--line-soft); padding: 4px 0; }
+.playlist-group-header { font-weight: 500; cursor: pointer; user-select: none; padding: 4px 2px; }
 .playlist-group-header:hover { background: var(--hover); }
 .playlist-group-header .caret { display: inline-block; width: 12px; }
 .playlist-group-body { padding-left: 16px; }
-.item-row { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px dashed var(--border); }
+.item-row { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--line-soft); }
 .item-row:hover { background: var(--hover); }
 .item-row.unavailable { color: var(--muted); font-style: italic; }
 .item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-title small { color: var(--muted); }
-.item-actions button { font-size: 11px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); background: var(--bg); }
+.item-actions { flex-shrink: 0; }
+.item-actions button { font-size: 11px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line); }
 .item-actions button + button { margin-left: 4px; }
 
 #status-line { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 16px; }
-#status-line.error { color: var(--err); }
+#status-line.error { color: var(--accent); }
