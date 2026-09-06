@@ -142,17 +142,18 @@ async function handleLoadAllPlaylists(force) {
   const idx = state.playlistIndex?.items;
   if (!idx || idx.length === 0) return { error: "no_playlist_index" };
   const cache = state.playlistCache ?? {};
+  let done = 0;
+  let total = 0;
   try {
     const token = await getAuthToken({ interactive: false });
     // Custom loop instead of using fetchAllMyPlaylists's aggregate return, so we
     // can persist each playlist to storage AS it arrives (better UX).
     const targets = force ? idx : idx.filter((p) => !(p.id in cache));
-    const total = targets.length;
+    total = targets.length;
     if (total === 0) {
       await chrome.storage.local.set({ loadProgress: { active: false, done: 0, total: 0 } });
       return { ok: true, addedCount: 0 };
     }
-    let done = 0;
     await chrome.storage.local.set({ loadProgress: { active: true, done: 0, total, currentTitle: "" } });
 
     const tasks = targets.map((p) => async () => {
@@ -180,7 +181,11 @@ async function handleLoadAllPlaylists(force) {
     });
     return { ok: true, addedCount: total };
   } catch (err) {
-    await chrome.storage.local.set({ loadProgress: { active: false, done: 0, total: 0, error: String(err?.message ?? err) } });
+    await chrome.storage.local.set({
+      // Report real counts: playlists fetched before the failure are already cached
+      // and searchable, so `0/0` would tell the user nothing loaded when most did.
+      loadProgress: { active: false, done, total, currentTitle: "", error: String(err?.message ?? err) },
+    });
     if (err instanceof NotSignedInError) return { error: "not_signed_in" };
     throw err;
   }
