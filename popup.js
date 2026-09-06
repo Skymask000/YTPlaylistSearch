@@ -252,13 +252,17 @@ function renderFreshness(uiState, playlistCache) {
   if (!id) { el.textContent = ""; return; }
   if (id === "ALL") {
     const times = Object.values(playlistCache ?? {}).map((e) => e.fetchedAt).filter(Boolean);
-    if (times.length === 0) { el.textContent = "Not loaded yet"; return; }
-    // Across many playlists the honest figure is the staleset one, so label it
-    // "Oldest" rather than implying everything was fetched at that moment.
-    el.textContent = `Oldest: ${humanAgo(Math.min(...times))}`;
+    if (times.length === 0) { el.textContent = "Not loaded yet"; el.title = ""; return; }
+    // The figure shown is the STALEST of the cached playlists — the conservative
+    // answer to "how out of date might this be?". The label stays plain and the
+    // precision lives in the tooltip, rather than a cryptic "Oldest:" prefix.
+    el.textContent = `Refreshed ${humanAgo(Math.min(...times))}`;
+    el.title = `Oldest of ${times.length} cached playlist${times.length === 1 ? "" : "s"}`
+      + `; newest ${humanAgo(Math.max(...times))}`;
   } else {
     const entry = playlistCache?.[id];
     el.textContent = entry ? `Refreshed ${humanAgo(entry.fetchedAt)}` : "Not loaded yet";
+    el.title = entry ? "This playlist was last fetched from YouTube then" : "";
   }
 }
 
