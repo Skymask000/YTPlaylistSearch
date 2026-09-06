@@ -26,9 +26,9 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  padding: 12px 14px;
-  min-height: 200px;
+  padding: 0;          /* padding lives on #app now, so it can own the frame */
   line-height: 1.4;
+  overflow: hidden;    /* the body must never scroll — see #app below */
 }
 
 /* Width lives on #app rather than body so the user can drag it. Chrome caps
@@ -43,9 +43,20 @@ body {
   width: 520px;
   min-width: 360px;
   max-width: 780px;
+  /* Chrome caps popups at 600px tall. Capping just under that makes #app the
+     frame: it grows with content up to the limit, then stops — so the body
+     never needs a scrollbar of its own. */
+  max-height: 580px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
   resize: horizontal;
   overflow: hidden;
 }
+
+/* Only the results list absorbs the squeeze; everything above it keeps its
+   natural height instead of being compressed. */
+#app > *:not(#results) { flex-shrink: 0; }
 
 #app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 /* matches YT Playlist Builder's title treatment */
@@ -113,13 +124,18 @@ button { padding: 4px 10px; cursor: pointer; }
 
 #results {
   margin-top: 8px;
-  max-height: 340px;
+  /* The ONLY scroller in the popup. No fixed max-height: as a flex child of a
+     capped #app it takes whatever vertical space is left, so short result sets
+     don't leave dead space and long ones scroll here rather than scrolling the
+     whole popup. min-height:0 is what actually lets a flex child shrink below
+     its content and scroll — without it the body would overflow instead. */
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  /* Reserve the scrollbar track up-front, otherwise the Play buttons sit under
-     it and get clipped once the list overflows. `stable` also stops the whole
-     list shifting sideways the moment a filter makes it scrollable. */
+  /* Reserve the scrollbar track up-front, so rows aren't laid out underneath it
+     and the Play buttons don't end up clipped. */
   scrollbar-gutter: stable;
-  padding-right: 4px;
+  padding-right: 8px;
 }
 .playlist-group { border-top: 1px solid var(--line-soft); padding: 4px 0; }
 .playlist-group-header { font-weight: 500; cursor: pointer; user-select: none; padding: 4px 2px; }
@@ -166,7 +182,6 @@ button { padding: 4px 10px; cursor: pointer; }
   }
   .item-actions { padding-top: 2px; }
 
-  /* px, not vh — popup height is content-driven too, so a vh here is circular
-     for the same reason 100vw was. */
-  #results { max-height: 420px; }
+  /* no #results height here — the flex frame on #app already sizes it, and a
+     hard max-height would reintroduce a second scroll region. */
 }
