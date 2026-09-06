@@ -185,8 +185,17 @@ function renderIdentity(identity) {
 async function onSignIn(switchAccount) {
   setStatus("Signing in…");
   const res = await chrome.runtime.sendMessage({ action: "signIn", switchAccount });
-  if (res?.error) setStatus(`Sign-in failed: ${res.error}`, true);
-  else setStatus(`Signed in as ${res.identity?.title ?? "(unknown)"}.`);
+  if (res?.error) {
+    setStatus(`Sign-in failed: ${res.error}`, true);
+  } else {
+    setStatus(`Signed in as ${res.identity?.title ?? "(unknown)"}.`);
+    // The popup may already be open when a (new or switched) identity signs in,
+    // so the startup one-shot index fetch never runs for this session — fetch
+    // it here instead, for both the normal and switchAccount paths.
+    setStatus("Loading your playlists…");
+    await chrome.runtime.sendMessage({ action: "refreshPlaylistIndex" });
+    setStatus("");
+  }
   await fetchState();
 }
 

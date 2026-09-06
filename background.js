@@ -20,8 +20,18 @@ const DEFAULT_UI_STATE = {
 // fetches concurrently and depends on this.
 let cacheWriteChain = Promise.resolve();
 
-function updatePlaylistCache(mutate) {
+// Bumped by handleSignOut and by handleSignIn's switchAccount path — the two
+// places that invalidate the current playlist cache. Callers capture the
+// generation in effect when their handler started, so a write queued by a
+// superseded session (signed out / switched mid-flight) can be dropped instead
+// of resurrecting that session's data into the next one.
+let cacheGeneration = 0;
+
+function updatePlaylistCache(mutate, generation) {
   const run = cacheWriteChain.then(async () => {
+    // A sign-out or account switch bumps cacheGeneration; writes queued by the
+    // superseded session must not resurrect its data.
+    if (generation !== cacheGeneration) return;
     const cur = (await chrome.storage.local.get("playlistCache")).playlistCache ?? {};
     await chrome.storage.local.set({ playlistCache: mutate(cur) });
   });
@@ -75,6 +85,12 @@ async function handleSignIn(switchAccount) {
     const token = await getAuthToken({ interactive: true, switchAccount });
     const identity = await getMyChannel(token);
     await chrome.storage.local.set({ authIdentity: identity });
+    if (switchAccount) {
+      // A new identity is now established: the previous account's playlist
+      // library must not remain visible/searchable under it.
+      cacheGeneration += 1;
+      await chrome.storage.local.remove(["playlistIndex", "playlistCache"]);
+    }
     return { ok: true, identity };
   } catch (err) {
     if (err instanceof NotSignedInError) return { error: err.message };
@@ -83,21 +99,10 @@ async function handleSignIn(switchAccount) {
 }
 
 async function handleSignOut() {
+  cacheGeneration += 1;
   await clearAuthToken();
   await chrome.storage.local.remove(["authIdentity", "playlistIndex", "playlistCache"]);
   return { ok: true };
-}
-
-async function handleRefreshIdentity() {
-  try {
-    const token = await getAuthToken({ interactive: false });
-    const identity = await getMyChannel(token);
-    await chrome.storage.local.set({ authIdentity: identity });
-    return { ok: true, identity };
-  } catch (err) {
-    if (err instanceof NotSignedInError) return { ok: false, identity: null };
-    throw err;
-  }
 }
 
 async function handleRefreshPlaylistIndex() {
@@ -115,6 +120,7 @@ async function handleRefreshPlaylistIndex() {
 
 async function handleLoadPlaylist(playlistId, force) {
   if (!playlistId) return { error: "missing_playlistId" };
+  const gen = cacheGeneration;
   const state = await chrome.storage.local.get(["playlistCache", "playlistIndex"]);
   const cache = state.playlistCache ?? {};
   if (!force && cache[playlistId]) return { ok: true, fromCache: true };
@@ -130,7 +136,7 @@ async function handleLoadPlaylist(playlistId, force) {
       source: "mine",
       items,
     };
-    await updatePlaylistCache((cur) => ({ ...cur, [playlistId]: entry }));
+    await updatePlaylistCache((cur) => ({ ...cur, [playlistId]: entry }), gen);
     return { ok: true, fromCache: false, count: items.length };
   } catch (err) {
     if (err instanceof NotSignedInError) return { error: "not_signed_in" };
@@ -139,6 +145,7 @@ async function handleLoadPlaylist(playlistId, force) {
 }
 
 async function handleLoadAllPlaylists(force) {
+  const gen = cacheGeneration;
   const state = await chrome.storage.local.get(["playlistIndex", "playlistCache"]);
   const idx = state.playlistIndex?.items;
   if (!idx || idx.length === 0) return { error: "no_playlist_index" };
@@ -158,6 +165,9 @@ async function handleLoadAllPlaylists(force) {
     await chrome.storage.local.set({ loadProgress: { active: true, done: 0, total, currentTitle: "" } });
 
     const tasks = targets.map((p) => async () => {
+      // Session ended (sign-out / account switch) while this task was still
+      // queued: no point spending an API call on a playlist nobody can see.
+      if (cacheGeneration !== gen) return;
       const items = await fetchPlaylistItems(token, p.id);
       await updatePlaylistCache((cur) => ({
         ...cur,
@@ -168,7 +178,7 @@ async function handleLoadAllPlaylists(force) {
           source: "mine",
           items,
         },
-      }));
+      }), gen);
       done += 1;
       await chrome.storage.local.set({
         loadProgress: { active: done < total, done, total, currentTitle: p.title },
@@ -195,6 +205,7 @@ async function handleLoadAllPlaylists(force) {
 async function handleLoadLinkPlaylist(url) {
   const playlistId = extractPlaylistId(url);
   if (!playlistId) return { error: "invalid_url" };
+  const gen = cacheGeneration;
   try {
     const token = await getAuthToken({ interactive: false });
     const items = await fetchPlaylistItems(token, playlistId);
@@ -207,7 +218,7 @@ async function handleLoadLinkPlaylist(url) {
         source: "link",
         items,
       },
-    }));
+    }), gen);
     return { ok: true, playlistId, count: items.length };
   } catch (err) {
     if (err instanceof NotSignedInError) return { error: "not_signed_in" };
@@ -227,8 +238,6 @@ async function handleMessage(msg) {
       return await handleSignIn(msg.switchAccount === true);
     case "signOut":
       return await handleSignOut();
-    case "refreshIdentity":
-      return await handleRefreshIdentity();
     case "refreshPlaylistIndex":
       return await handleRefreshPlaylistIndex();
     case "loadPlaylist":
