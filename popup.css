@@ -27,14 +27,22 @@
 body {
   margin: 0;
   padding: 12px 14px;
-  /* A fixed width, not a min/max range: with a range the popup resizes as the
-     longest visible title changes, which reads as jitter. 520px sits alongside
-     YT Playlist Builder's ~490px while leaving room for the Play buttons.
-     max-width keeps it inside a narrow phone viewport. */
-  width: 520px;
   max-width: 100vw;
   min-height: 200px;
   line-height: 1.4;
+}
+
+/* Width lives on #app rather than body so the user can drag it. Chrome caps
+   popups at 800px wide, and the body padding eats ~28px, so 780 is the useful
+   ceiling. A fixed starting width (not a min/max range) keeps the popup from
+   resizing itself as the longest visible title changes. `overflow: hidden` is
+   required for `resize` to take effect at all. */
+#app {
+  width: 520px;
+  min-width: 360px;
+  max-width: min(780px, 100vw);
+  resize: horizontal;
+  overflow: hidden;
 }
 
 #app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }

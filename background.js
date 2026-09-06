@@ -13,6 +13,7 @@ const DEFAULT_UI_STATE = {
   scopes: { song: true, channel: false, description: false, playlist: false },
   expandedGroups: {},
   fontScale: 13, // px; drives --base in popup.css. Clamped 11-18 by the popup.
+  popupWidth: 520, // px; user-draggable. Clamped 360-780 (Chrome caps popups at 800).
 };
 
 // All playlistCache read-modify-writes funnel through this chain. Each mutator
