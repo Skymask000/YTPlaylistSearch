@@ -1,6 +1,6 @@
 import { getAuthToken, clearAuthToken, NotSignedInError } from "./src/auth.js";
 import { getMyChannel, listMyPlaylists } from "./src/ytApi.js";
-import { fetchPlaylistItems } from "./src/ytPlaylistItems.js";
+import { fetchPlaylistItems, withConcurrency } from "./src/ytPlaylistItems.js";
 
 const DEFAULT_UI_STATE = {
   schemaVersion: 1,
@@ -36,6 +36,7 @@ async function readAll() {
     "playlistIndex",
     "playlistCache",
     "uiState",
+    "loadProgress",
   ]);
   const uiState = { ...DEFAULT_UI_STATE, ...(s.uiState ?? {}) };
   // `scopes` is a fixed 4-key shape. Backfill it explicitly so uiState written
@@ -50,6 +51,7 @@ async function readAll() {
     playlistIndex: s.playlistIndex ?? null,
     playlistCache: s.playlistCache ?? {},
     uiState,
+    loadProgress: s.loadProgress ?? { active: false, done: 0, total: 0 },
   };
 }
 
@@ -135,6 +137,55 @@ async function handleLoadPlaylist(playlistId, force) {
   }
 }
 
+async function handleLoadAllPlaylists(force) {
+  const state = await chrome.storage.local.get(["playlistIndex", "playlistCache"]);
+  const idx = state.playlistIndex?.items;
+  if (!idx || idx.length === 0) return { error: "no_playlist_index" };
+  const cache = state.playlistCache ?? {};
+  try {
+    const token = await getAuthToken({ interactive: false });
+    // Custom loop instead of using fetchAllMyPlaylists's aggregate return, so we
+    // can persist each playlist to storage AS it arrives (better UX).
+    const targets = force ? idx : idx.filter((p) => !(p.id in cache));
+    const total = targets.length;
+    if (total === 0) {
+      await chrome.storage.local.set({ loadProgress: { active: false, done: 0, total: 0 } });
+      return { ok: true, addedCount: 0 };
+    }
+    let done = 0;
+    await chrome.storage.local.set({ loadProgress: { active: true, done: 0, total, currentTitle: "" } });
+
+    const tasks = targets.map((p) => async () => {
+      const items = await fetchPlaylistItems(token, p.id);
+      await updatePlaylistCache((cur) => ({
+        ...cur,
+        [p.id]: {
+          fetchedAt: Date.now(),
+          playlistId: p.id,
+          playlistTitle: p.title,
+          source: "mine",
+          items,
+        },
+      }));
+      done += 1;
+      await chrome.storage.local.set({
+        loadProgress: { active: done < total, done, total, currentTitle: p.title },
+      });
+    });
+    await withConcurrency(5, tasks);
+    // Authoritative terminal state: per-worker progress writes can land out of order,
+    // so the last one to arrive isn't necessarily the one with the highest `done`.
+    await chrome.storage.local.set({
+      loadProgress: { active: false, done: total, total, currentTitle: "" },
+    });
+    return { ok: true, addedCount: total };
+  } catch (err) {
+    await chrome.storage.local.set({ loadProgress: { active: false, done: 0, total: 0, error: String(err?.message ?? err) } });
+    if (err instanceof NotSignedInError) return { error: "not_signed_in" };
+    throw err;
+  }
+}
+
 async function handleMessage(msg) {
   switch (msg?.action) {
     case "getState":
@@ -153,6 +204,7 @@ async function handleMessage(msg) {
     case "loadPlaylist":
       return await handleLoadPlaylist(msg.playlistId, msg.force === true);
     case "loadAllPlaylists":
+      return await handleLoadAllPlaylists(msg.force === true);
     case "loadLinkPlaylist":
       return { error: "not_implemented" };
     default:
