@@ -27,6 +27,9 @@ body {
   line-height: 1.4;
 }
 
+/* matches YT Playlist Builder's title treatment */
+h1 { font-size: 15px; margin: 0 0 8px 0; }
+
 fieldset {
   border: 1px solid var(--line);
   border-radius: 6px;
