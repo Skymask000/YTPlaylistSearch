@@ -1,4 +1,7 @@
 import { filter } from "./src/searchFilter.js";
+import { detectPlatform, getPlayUrls } from "./src/platform.js";
+
+const platform = detectPlatform(navigator.userAgentData, navigator.userAgent);
 
 let state = null;
 let lastSubmittedUrl = null;
@@ -42,7 +45,28 @@ function renderItemRow(item) {
   row.appendChild(title);
   const actions = document.createElement("div");
   actions.className = "item-actions";
-  // Play buttons rendered in Task 17.
+  if (!item.unavailable) {
+    const { tabUrl, appUrl } = getPlayUrls(item.videoId, item.playlistId, platform);
+    const tabBtn = document.createElement("button");
+    tabBtn.type = "button";
+    tabBtn.textContent = platform === "desktop" ? "▶ Play" : "▶ Tab";
+    tabBtn.title = "Open in a new browser tab";
+    tabBtn.addEventListener("click", () => chrome.tabs.create({ url: tabUrl, active: true }));
+    actions.appendChild(tabBtn);
+    if (appUrl) {
+      const appBtn = document.createElement("button");
+      appBtn.type = "button";
+      appBtn.textContent = "📱 App";
+      appBtn.title = "Open in the YouTube app";
+      appBtn.addEventListener("click", () => chrome.tabs.create({ url: appUrl, active: true }));
+      actions.appendChild(appBtn);
+    }
+  } else {
+    const disabled = document.createElement("span");
+    disabled.textContent = "Unavailable";
+    disabled.style.color = "var(--muted)";
+    actions.appendChild(disabled);
+  }
   row.appendChild(actions);
   return row;
 }
