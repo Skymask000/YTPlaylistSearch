@@ -1,4 +1,4 @@
-# YT Playlist Search
+# <img src="icons/icon128.png" width="36" align="top" alt=""> YT Playlist Search
 
 A Chromium MV3 extension. Sign in with Google, then search across your own YouTube playlists — or paste any public playlist URL — with per-field scope checkboxes (song, channel, description, playlist name). Results are grouped by playlist. Play matches in a new browser tab, or (on Android/iOS) in the YouTube app.
 
